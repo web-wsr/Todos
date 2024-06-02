@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todos Request</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font: 24px Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            color: #666;
+            box-sizing: border-box;
+        }
+
+        .todos-container {
+            margin: 100px auto;
+            width: 550px;
+        }
+
+        .todos-title {
+            font-size: 100px;
+            text-align: center;
+            font-weight: 100;
+            color: rgba(175, 47, 47, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .todos-content {
+            position: relative;
+            background: #fff;
+            box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .todos-input {
+            display: block;
+            width: 100%;
+            padding: 16px 16px 16px 60px;
+            border: none;
+            outline: none;
+            font-weight: 200;
+        }
+
+        .todo-item {
+            padding: 16px;
+            display: flex;
+            border-top: 1px solid #e4e4e4;
+        }
+
+        .todo-item-hd {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #e4e4e4;
+            border-radius: 50%;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+
+        .todo-item-bd {
+            flex: 1;
+            color: #333;
+        }
+
+        .todo-item-ft {
+            display: none;
+            cursor: pointer;
+        }
+
+        .todo-item:hover .todo-item-ft {
+            display: inline-block;
+            color: #999;
+        }
+
+        .todo-item.active .todo-item-hd:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(175, 47, 47, 0.15);
+        }
+
+        .todo-item.active .todo-item-bd {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        /* 筛选控制 */
+        .todos-filter {
+            border-top: 1px solid #e4e4e4;
+            padding: 8px 16px;
+            text-align: center;
+        }
+
+        .todos-filter .filter-item {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 4px 8px;
+            font-size: 14px;
+            color: #999;
+            border: 1px solid #999;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .todos-filter .filter-item.active {
+            border-color: #333;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- <p class="my-p"></p> -->
+    <!-- <script src="https://lib.baomitu.com/axios/0.19.0-beta.1/axios.js"></script> -->
+    <!-- <script>
+        // 使用axios 函数
+        // axios({
+        //     url: 'https://api.aitschool.com/api/districts/all'
+        // }).then(result => {
+        //     console.log(result);
+        //     console.log(result.data.data)
+        //     const arr = result.data.data.map(item => item.label)
+        //     document.querySelector('.my-p').innerHTML = arr.join('<br>')
+
+        // })
+        // const URL = 'https://api.aitschool.com/api/districts/all';
+        // axios.get(URL).then(res => {
+        //     console.log(res.data)
+        // })
+
+    </script> -->
+    <div class="todos-container">
+        <h1 class="todos-title">todos</h1>
+        <div class="todos-content">
+            <div class="todos-input-cell">
+                <input class="todos-input" id="todo-input" type="text" name="todo" placeholder="请输入计划事项">
+            </div>
+            <div class="todos-list" id="todos-list">
+                <div class="todo-item">
+                    <div class="todo-item-hd"></div>
+                    <div class="todo-item-bd">打一瓶酱油</div>
+                    <div class="todo-item-ft">x</div>
+                </div>
+                <div class="todo-item active">
+                    <div class="todo-item-hd"></div>
+                    <div class="todo-item-bd">跑步800米</div>
+                    <div class="todo-item-ft">x</div>
+                </div>
+            </div>
+            <!-- 筛选控制 -->
+            <div class="todos-filter" id="todos-filter">
+                <span class="filter-item active" data-completed="">全部</span>
+                <span class="filter-item" data-completed="0">待办</span>
+                <span class="filter-item" data-completed="1">已办</span>
+            </div>
+            <!-- 筛选控制 -->
+        </div>
+    </div>
+    <script type="text/javascript">
+        // API接口
+        const API_TODOS = "https://api.aitschool.com/api/web/todos";
+        console.log(API_TODOS);
+        const API_TODO = id => `https://api.aitschool.com/api/web/todos/${id}`
+
+        const PAGE = {
+            data: {
+                todos: []
+            },
+            init: function () {
+                this.bind()
+                // 替换render方法为获取数据方法 getTodos()
+                this.getTodos()
+            },
+            bind: function () {
+                // 绑定输入事件
+                let input = document.getElementById('todo-input')
+                input.addEventListener('keyup', this.addTodo)
+                // 委托绑定修改事件 toggleTodo
+                let todoList = document.getElementById('todos-list')
+                this.onEventLister(todoList, 'click', 'todo-item-hd', this.toggleTodo)
+                // 委托绑定删除事件 removeTodo
+                this.onEventLister(todoList, 'click', 'todo-item-ft', this.removeTodo)
+                // 委托绑定筛选事件 filterTodo
+                let todoFilter = document.getElementById('todos-filter')
+                this.onEventLister(todoFilter, 'click', 'filter-item', this.filterTodo)
+            },
+            // 封装委托函数
+            onEventLister: function (parentNode, action, childClassName, callback) {
+                parentNode.addEventListener(action, function (e) {
+                    // 写成逻辑短路
+                    e.target.className.indexOf(childClassName) >= 0 && callback(e)
+                })
+            },
+            // 筛选事件 filterTodo
+            filterTodo: function (e) {
+                // 筛选规则
+                let completed = e.target.dataset.completed
+                // console.log(completed);
+                // 筛选条件请求数据
+                PAGE._XHR("GET", API_TODOS, {
+                    completed: completed,
+                }, {}, (res) => {
+                    PAGE.data.todos = res.data;
+                    // 6. 重新渲染视图
+                    PAGE.render();
+                });
+                document.querySelectorAll(".filter-item").forEach(d => d.className = "filter-item");
+                e.target.className = "filter-item active";
+            },
+            // 删除事件 removeTodo
+            removeTodo: function (e) {
+                // 4. 获取 todos 数组、父级元素、位置、id 索引
+                let todos = PAGE.data.todos;
+                let todoItem = e.target.parentNode;
+                let id = todoItem.dataset.id;
+                let index = todoItem.dataset.index;
+                // 发送删除数据的请求，修改对应id的todo
+                PAGE._XHR("DELETE", API_TODO(id), {}, {}, (res) => {
+                    // 5. 删除数组对应位置的 todo
+                    todos.splice(index, 1);
+                    // 6. 重新渲染视图
+                    PAGE.render();
+                });
+            },
+            // 修改切换事件
+            toggleTodo: function (e) {
+                // 4. 获取 todos 数组、父级元素、位置、id 索引
+                let todos = PAGE.data.todos;
+                let todoItem = e.target.parentNode;
+                let id = todoItem.dataset.id;
+                let index = todoItem.dataset.index;
+                let todoData = PAGE.data.todos[index];
+                // 5. 发送修改数据请求，修改该 id 对应 todo 的 completed 状态
+                PAGE._XHR("PUT", API_TODO(id), {}, {
+                    completed: Number(!todoData['completed']),
+                }, (res) => {
+                    // 6. 修改 todos 索引下项目 completed 完成属性的值
+                    todos[index].completed = Number(!todoData['completed']);
+                    // 7. 重新渲染视图
+                    PAGE.render();
+                });
+            },
+            // 获取 todos 的数据
+            getTodos: function () {
+                // XHR 和 API 获取 todos 的数据
+                this._XHR('Get', API_TODOS, {}, {}, (res) => {
+                    PAGE.data.todos = res.data
+                    this.render()
+                })
+            },
+            // 输入事件
+            addTodo: function (e) {
+                // 判断输入值和回车键
+                let value = this.value.trim()
+                if (e.which !== 13 || !value) {
+                    return
+                }
+                // 发送添加请求
+                PAGE._XHR('post', API_TODOS, {}, {
+                    title: value,
+                }, (res) => {
+                    const id = res.data.id
+                    let todos = PAGE.data.todos
+                    todos.push({
+                        id: id,
+                        title: value,
+                        completed: false
+                    })
+                    // 渲染页面
+                    PAGE.render()
+                })
+                // 清空输入框
+                this.value = ''
+            },
+            // 渲染页面
+            render: function () {
+                let todos = this.data.todos
+                let todosElement = todos.map((data, index) => {
+                    return `
+                    <div class="todo-item ${data.completed ? 'active' : ''}" data-id='${data.id}' data-index="${index}">
+                     <div class="todo-item-hd"></div>
+                     <div class="todo-item-bd">${data.title}</div>
+                     <div class="todo-item-ft">x</div>
+                    </div>
+                    `
+                }).join('');
+                let todoList = document.getElementById('todos-list');
+                todoList.innerHTML = todosElement
+            },
+            // 公共方法 _XHR
+            _XHR(method, url, params, datas, success) {
+                const xhr = new XMLHttpRequest();
+                const formatParams = Object.keys(params)
+                    .map(k => `${k}=${params[k]}`)
+                    .join('&');
+                const formatUrl = formatParams
+                    ? `${url}?${formatParams}`
+                    : url;
+                xhr.open(method, formatUrl, true);
+                const formData = new URLSearchParams();
+                for (let key in datas) {
+                    formData.append(key, datas[key]);
+                }
+                xhr.onerror = function (xhr, status, text) {
+                    console.log(xhr, status, text);
+                };
+                xhr.onreadystatechange = function (response) {
+                    if (xhr.readyState == 4 && xhr.status == 200 && xhr.responseText != "") {
+                        typeof success === 'function' && success(JSON.parse(xhr.response))
+                    } else if (xhr.status != 200 && xhr.responseText) {
+                        console.log(xhr, xhr.status, xhr.responseText);
+                    }
+                };
+                xhr.send(formData);
+            }
+        }
+
+        PAGE.init();
+    </script>
+</body>
+
+</html>

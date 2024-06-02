@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Storage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font: 24px Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            color: #666;
+            box-sizing: border-box;
+        }
+
+        .todos-container {
+            margin: 100px auto;
+            width: 550px;
+        }
+
+        .todos-title {
+            font-size: 100px;
+            text-align: center;
+            font-weight: 100;
+            color: rgba(175, 47, 47, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .todos-content {
+            position: relative;
+            background: #fff;
+            box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .todos-input {
+            display: block;
+            width: 100%;
+            padding: 16px 16px 16px 60px;
+            border: none;
+            outline: none;
+            font-weight: 200;
+        }
+
+        .todo-item {
+            padding: 16px;
+            display: flex;
+            border-top: 1px solid #e4e4e4;
+        }
+
+        .todo-item-hd {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #e4e4e4;
+            border-radius: 50%;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+
+        .todo-item-bd {
+            flex: 1;
+            color: #333;
+        }
+
+        .todo-item-ft {
+            display: none;
+            cursor: pointer;
+        }
+
+        .todo-item:hover .todo-item-ft {
+            display: inline-block;
+            color: #999;
+        }
+
+        .todo-item.active .todo-item-hd:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(175, 47, 47, 0.15);
+        }
+
+        .todo-item.active .todo-item-bd {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        /* 筛选控制 */
+        .todos-filter {
+            border-top: 1px solid #e4e4e4;
+            padding: 8px 16px;
+            text-align: center;
+        }
+
+        .todos-filter .filter-item {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 4px 8px;
+            font-size: 14px;
+            color: #999;
+            border: 1px solid #999;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .todos-filter .filter-item.active {
+            border-color: #333;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="todos-container">
+        <h1 class="todos-title">todos</h1>
+        <div class="todos-content">
+            <div class="todos-input-cell">
+                <input class="todos-input" id="todo-input" type="text" name="todo" placeholder="请输入计划事项">
+            </div>
+            <div class="todos-list" id="todos-list">
+                <div class="todo-item">
+                    <div class="todo-item-hd"></div>
+                    <div class="todo-item-bd">打一瓶酱油</div>
+                    <div class="todo-item-ft">x</div>
+                </div>
+                <div class="todo-item active">
+                    <div class="todo-item-hd"></div>
+                    <div class="todo-item-bd">跑步800米</div>
+                    <div class="todo-item-ft">x</div>
+                </div>
+            </div>
+            <!-- 筛选控制 -->
+            <div class="todos-filter" id="todos-filter">
+                <span class="filter-item active">全部</span>
+                <span class="filter-item">待办</span>
+                <span class="filter-item">已办</span>
+            </div>
+            <!-- 筛选控制 -->
+        </div>
+    </div>
+    <script>
+        // 单例对象
+        // const PAGE = {
+        //     init: function () {
+        //         this.bind();
+        //     },
+        //     bind: function () {
+        //         console.log('binggo');
+        //     }
+        // }
+        // PAGE.init();
+        const PAGE = {
+            // 4. 定义 PAGE.data 数据集合
+            data: {
+                todos: [{
+                    title: '打一瓶酱油',
+                    completed: false
+                }, {
+                    title: '跑步800米',
+                    completed: true
+                }],
+                filters: {
+                    1: '全部',
+                    2: '待办',
+                    3: '已办',
+                },
+                filter: 1,
+            },
+            init: function () {
+                this.bind();
+                // // 1. 在 init 方法中调用 render 渲染方法
+                // this.render();
+                // 4 在 init 方法中的render 替换为getTodos方法 获取数据后再渲染render
+                this.getTodos();
+
+            },
+            bind: function () {
+                //  1 为输入元素绑定键盘事件
+                // 先获取todo-input 元素
+                let input = document.getElementById('todo-input')
+                input.addEventListener('keyup', this.addTodo)
+                // 2 委托绑定切换事件
+                let todoList = document.getElementById('todos-list')
+                this.onEventLister(todoList, 'click', 'todo-item-hd', this.togoleTodo)
+                // 3 委托绑定删除事件
+                this.onEventLister(todoList, 'click', 'todo-item-ft', this.removeTodo)
+                // 4 委托绑定筛选事件
+                let todoFilter = document.getElementById('todos-filter')
+                this.onEventLister(todoFilter, 'click', 'filter-item', this.filterTodo)
+                // 5 绑定页面卸载事件
+                window.addEventListener('unload', this.saveTodos)
+            },
+            // 1 新增 getTodos 事件
+            getTodos: function () {
+                // 2 获取本地存储 localStorage 中的todos值
+                let todos = localStorage.getItem('todos')
+                // 3 运用 parse 转化JSON字符串 并用逻辑中断判断数据是否存在
+                todos = JSON.parse(todos) || []
+                // 4 把 todos 设置到 PAGE.data.todos中
+                PAGE.data.todos = todos
+                // 5 渲染页面
+                this.render()
+            },
+            // 2 新增 saveTodos 事件
+            saveTodos: function () {
+                // 1 获取 PAGE.data.todos
+                let todos = PAGE.data.todos
+                // 2 将 PAGE.data.todos 转化为json字符串
+                let todosStr = JSON.stringify(todos)
+                // 3 将 todos字符串存储在 localStorage 的todos中
+                localStorage.setItem('todos', todosStr)
+            },
+            // 1 添加委托绑定添加封装函数
+            onEventLister: function (parentNode, action, childClassName, callback) {
+                parentNode.addEventListener(action, function (e) {
+                    if (e.target.className.indexOf(childClassName) >= 0) {
+                        callback(e)
+                    }
+                })
+            },
+            // 2. 在 PAGE 中定义 render 渲染方法
+            render: function () {
+                // 3. 获取 PAGE.data.todos 应用的数据
+                // 4. 获取 PAGE.data.filters 所拥有的筛选规则
+                // 5. 获取 PAGE.data.filter 获取当前的筛选规则
+                let todos = this.data.todos;
+                let filters = this.data.filters;
+                let filter = this.data.filter;
+                // 6. 为应用数据添加索引
+                todos.forEach((data, index) => data.index = index);
+                // 7. 根据筛选规则生成显示数组
+                let showTodos;
+                switch (filter) {
+                    case 2:
+                        showTodos = todos.filter(data => !data.completed);
+                        break;
+                    case 3:
+                        showTodos = todos.filter(data => data.completed);
+                        break;
+                    default:
+                        showTodos = todos;
+                        break
+                }
+                console.log(showTodos);
+                // 8. 根据显示数组生成显示事项 HTML 的字符串
+                // 并加上 data-index 索引 ，用于之后的事件使用寻找当前元素对应的数据。
+                let todosElement = showTodos.map((data) => {
+                    return `
+                        <div class="todo-item ${data.completed ? 'active' : ''}" data-index="${data.index}">
+                        <div class="todo-item-hd"></div>
+                        <div class="todo-item-bd">${data.title}</div>
+                        <div class="todo-item-ft">x</div>
+                        </div>
+                            `
+                }).join('');
+                console.log(todosElement);
+                // 9. 根据筛选规则生成筛选规则 HTML 的字符串
+                // 并加上 data-id 索引 ，用于之后的事件使用寻找当前元素对应的数据。
+                let filterElement = Object.keys(filters).map(key => {
+                    return `<span class="filter-item ${filter == key ? 'active' : ''}" data-id="${key}">${filters[key]}</span>`
+                }).join('')
+                console.log(filterElement);
+                // 10. 显示事项 HTML 的字符串替换到 todos-list 元素中
+                // 11. 筛选规则 HTML 的字符串替换到 todos-filter 元素中
+                // 获取 todos - list和todos - filter
+                let todoList = document.getElementById('todos-list')
+                let todoFilter = document.getElementById('todos-filter')
+                todoList.innerHTML = todosElement;
+                todoFilter.innerHTML = filterElement;
+            },
+            // 分离键盘事件绑定的方法到addTodo 属性中
+            addTodo: function (e) {
+                // 2 判断键位和输入值
+                let value = this.value.trim()
+                if (e.which !== 13 || !value) {
+                    return
+                }
+                // 3 获取todos 并在数组中添加一项
+                let todos = PAGE.data.todos;
+                todos.push({
+                    title: value,
+                    completed: false
+                })
+                // 4 重新渲染视图
+                PAGE.render()
+                // 5 输入框的值设置为空
+                this.value = ''
+            },
+            // 3 创建 togoleTodo事件
+            togoleTodo: function (e) {
+                // 4 获取todos 数组  父级元素 位置索引
+                let todos = PAGE.data.todos;
+                let todoItem = e.target.parentNode;
+                let index = todoItem.dataset.index;
+                // 5 修改todos 项目下的complete完成属性的值
+                // 取一个相反值
+                todos[index].completed = !todos[index].completed;
+                // 6 重新渲染视图
+                PAGE.render()
+            },
+            // 4 创建 removeTodo事件
+            removeTodo: function (e) {
+                // 4 获取todos 数组  父级元素 位置索引
+                let todos = PAGE.data.todos;
+                let todoItem = e.target.parentNode;
+                let index = todoItem.dataset.index;
+                // 5 删除todos 索引下项目
+                todos.splice(index, 1)
+                // 6 重新渲染视图
+                PAGE.render()
+            },
+            // 5 创建 filterTodo 事件
+            filterTodo: function (e) {
+                // 5 获取筛选规则
+                let filterItem = e.target
+                let filter = filterItem.dataset.id
+                // 6 更新筛选规则
+                PAGE.data.filter = +filter
+                // 7 重新渲染视图
+                PAGE.render()
+            },
+        }
+        PAGE.init();
+    </script>
+</body>
+
+</html>

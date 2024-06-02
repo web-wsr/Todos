@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todos Basic</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font: 24px Helvetica, Arial, sans-serif;
+            font-weight: 400;
+            color: #666;
+            box-sizing: border-box;
+        }
+
+        .todos-container {
+            margin: 100px auto;
+            width: 550px;
+        }
+
+        .todos-title {
+            font-size: 100px;
+            text-align: center;
+            font-weight: 100;
+            color: rgba(175, 47, 47, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .todos-content {
+            position: relative;
+            background: #fff;
+            box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .todos-input {
+            display: block;
+            width: 100%;
+            padding: 16px 16px 16px 60px;
+            border: none;
+            outline: none;
+            font-weight: 200;
+        }
+
+        .todo-item {
+            padding: 16px;
+            display: flex;
+            border-top: 1px solid #e4e4e4;
+        }
+
+        .todo-item-hd {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #e4e4e4;
+            border-radius: 50%;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+
+        .todo-item-bd {
+            flex: 1;
+            color: #333;
+        }
+
+        .todo-item-ft {
+            display: none;
+            cursor: pointer;
+        }
+
+        .todo-item:hover .todo-item-ft {
+            display: inline-block;
+            color: #999;
+        }
+
+        .todo-item.active .todo-item-hd:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(175, 47, 47, 0.15);
+        }
+
+        .todo-item.active .todo-item-bd {
+            text-decoration: line-through;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="todos-container">
+        <h1 class="todos-title">todos</h1>
+        <div class="todos-content">
+            <div class="todos-input-cell">
+                <input class="todos-input" id="todo-input" type="text" name="todo" placeholder="请输入计划事项">
+            </div>
+            <div class="todos-list" id="todos-list">
+                <div class="todo-item">
+                    <div class="todo-item-hd"></div>
+                    <div class="todo-item-bd">打一瓶酱油</div>
+                    <div class="todo-item-ft">x</div>
+                </div>
+                <div class="todo-item active">
+                    <div class="todo-item-hd"></div>
+                    <div class="todo-item-bd">跑步800米</div>
+                    <div class="todo-item-ft">x</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        // 获取元素
+        let todoInput = document.getElementById('todo-input')
+        let todoList = document.getElementById('todos-list')
+        // 为输入框绑定键盘事件
+        // 1 获取输入框的输入值 trim() 消除空格
+        // 2 获取当前按下的键位
+        // 3 如果按下的不是的enter 或者输入框没有输入值 则返回结束
+        // 4 创建项目所包含的元素
+        // 5 为所创建的元素加className 属性
+        // 6 为创建的元素添加文本值
+        // 7 把新建项目元素添加到列表中 注意顺序
+        // 8. 把输入框元素的值设置为空
+        todoInput.addEventListener('keyup', function (e) {
+            let value = this.value.trim();
+            let key = e.which;
+            if (e.which !== 13 || !value) {
+                return;
+            }
+            let todoItem = document.createElement('div')
+            let todoItemHd = document.createElement('div')
+            let todoItemBd = document.createElement('div')
+            let todoItemFt = document.createElement('div')
+            todoItem.setAttribute('class', 'todo-item')
+            todoItemHd.setAttribute('class', 'todo-item-hd')
+            todoItemBd.setAttribute('class', 'todo-item-bd')
+            todoItemFt.setAttribute('class', 'todo-item-ft')
+            todoItemBd.innerText = value
+            todoItemFt.innerText = 'x'
+            todoItem.appendChild(todoItemHd)
+            todoItem.appendChild(todoItemBd)
+            todoItem.appendChild(todoItemFt)
+            todoList.appendChild(todoItem)
+            this.value = ''
+        })
+        // 切换和删除项目
+        // 为其父元素 todos-list 绑定点击事件
+        // 1 获取实际点击的元素 className
+        // 2 获取点击项目的父级元素 parentNode 为下面的移除父元素做准备
+        // 3 如果点击的的项目是状态元素 则切换其项目的状态
+        // 获取父元素的className中的active的第一次出现的索引值 判断时候是否重复
+        // 大于0 重新赋予todo-item 移除active
+        // 小于0 增加active 注意空格
+        todoList.addEventListener('click', function (e) {
+            let className = e.target.className
+            let todoItem = e.target.parentNode
+            if (className === 'todo-item-hd') {
+                let isAtive = todoItem.className.indexOf('active')
+                if (isAtive > 0) {
+                    todoItem.className = 'todo-item'
+                } else {
+                    todoItem.className += ' active'
+                }
+            } else if (className === 'todo-item-ft') {
+                todoItem.remove()
+            }
+        })
+    </script>
+</body>
+
+</html>
