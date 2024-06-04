@@ -18,7 +18,9 @@
         .todos-container {
             margin: 100px auto;
             width: 550px;
+            visibility: hidden;
         }
+
 
         .todos-title {
             font-size: 100px;
@@ -253,6 +255,7 @@
                 this._XHR('Get', API_TODOS, {}, {}, (res) => {
                     PAGE.data.todos = res.data
                     this.render()
+                    document.querySelector('.todos-container').style.visibility = 'visible';
                 })
             },
             // 输入事件
